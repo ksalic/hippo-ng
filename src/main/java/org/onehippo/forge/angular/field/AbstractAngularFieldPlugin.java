@@ -1,21 +1,32 @@
 /**
  * Copyright 2014 Hippo B.V. (http://www.onehippo.com)
- * <p/>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p/>
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package org.onehippo.forge.angular.field;
 
-import com.google.gson.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
+import java.util.Set;
+
+import javax.jcr.Node;
+import javax.jcr.RepositoryException;
+import javax.servlet.http.HttpServletRequest;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.request.cycle.RequestCycle;
@@ -32,18 +43,10 @@ import org.onehippo.forge.angular.AngularPluginContext;
 import org.onehippo.forge.angular.AngularPluginUtils;
 import org.onehippo.forge.angular.PluginConstants;
 import org.onehippo.forge.angular.behaviors.AbstractCustomPluginBehavior;
-import org.onehippo.forge.angular.jcr.JcrModelSerializer;
 import org.onehippo.forge.angular.behaviors.SwitchPerspectiveBehavior;
+import org.onehippo.forge.angular.jcr.JcrModelSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.jcr.Node;
-import javax.jcr.RepositoryException;
-import javax.servlet.http.HttpServletRequest;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 
 public abstract class AbstractAngularFieldPlugin extends RenderPlugin<Node> implements IObserver {
 
@@ -100,8 +103,10 @@ public abstract class AbstractAngularFieldPlugin extends RenderPlugin<Node> impl
         angularFieldPanel = new AngularFieldPanel("angularfield-container", UNIQUE_COMPONENT_ID, fieldContext, APP_NAME);
         angularFieldPanel.add(new UpdateModelDataBehaviour(fieldContext, "setModel"));
         angularFieldPanel.add(new GetModelDataBehaviour(fieldContext, "getModel"));
+        angularFieldPanel.add(new GetConfigDataBehaviour(fieldContext, "getConfig"));
         angularFieldPanel.add(new SwitchPerspectiveBehavior(fieldContext, "switchPerspective"));
         angularFieldPanel.add(new GetPluginConfigurationBehaviour(fieldContext, "getPluginConfig"));
+
 
         if (isEditMode()) {
             angularFieldPanel.add(new AttributeModifier("mode", "edit"));
@@ -243,6 +248,47 @@ public abstract class AbstractAngularFieldPlugin extends RenderPlugin<Node> impl
                             "UTF-8", fieldJson));
         }
     }
+
+    private class GetConfigDataBehaviour extends AbstractCustomPluginBehavior {
+        private static final long serialVersionUID = 1L;
+
+        private AngularPluginContext context;
+        private String componentTag;
+        private JcrNodeModel model;
+
+        public GetConfigDataBehaviour(AngularPluginContext context, String componentTag) {
+            super(context, componentTag);
+        }
+
+        @Override
+        public void onRequest() {
+            RequestCycle requestCycle = RequestCycle.get();
+
+            // Serialize the model data in a JSON object
+
+            final Gson gson = new GsonBuilder().create();
+
+            final IPluginConfig pluginConfig = getPluginConfig();
+            final Set<Map.Entry<String, Object>> entries = pluginConfig.entrySet();
+
+            JsonObject jsonObject = new JsonObject();
+            JsonObject modelObject = new JsonObject();
+            for (Map.Entry<String, Object> entry : entries) {
+                final Object value = entry.getValue();
+                if(value instanceof String){
+                    modelObject.addProperty(entry.getKey(), (String) value);
+                }
+            }
+            jsonObject.add("config", modelObject);
+
+            final String fieldJson = gson.toJson(jsonObject);//AbstractAngularFieldPlugin.this.getModelAsJson();
+
+            requestCycle.scheduleRequestHandlerAfterCurrent(
+                    new TextRequestHandler("application/json",
+                            "UTF-8", fieldJson));
+        }
+    }
+
     private final class UpdateModelDataBehaviour extends AbstractCustomPluginBehavior {
         private static final long serialVersionUID = 1L;
 

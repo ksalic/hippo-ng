@@ -1,7 +1,6 @@
 'use strict';
 var sdkApp = angular.module('hippoAngularSDK', []);
 
-
 /**
  * This is the controller field providing the SDK to the actual plugin
  * @param $scope dependency
@@ -29,7 +28,6 @@ function ngFieldController ($scope, $timeout, $log, $element, $http, $mdDialog) 
     return $scope.lastUpdate;
   }
 
-
   /**
    * Gets the mode that is set on the plugin (edit / compare)
    * @returns {string} mode that is set by the CMS
@@ -48,15 +46,37 @@ function ngFieldController ($scope, $timeout, $log, $element, $http, $mdDialog) 
     var queryUrl = $element.attr('getModel');
     if (queryUrl != undefined) {
       return $http.post(queryUrl).then(
-          function (response) {
-            $scope.lastUpdate = new Date().toLocaleString();
-            return response;
-          },
-          function (httpError) {
-            // translate the error
-            throw httpError.status + " : " +
-            httpError.data;
-          }
+        function (response) {
+          $scope.lastUpdate = new Date().toLocaleString();
+          return response;
+        },
+        function (httpError) {
+          // translate the error
+          throw httpError.status + " : " +
+          httpError.data;
+        }
+      )
+    }
+  }
+
+  /**
+   * Loads the config as it is currently available in the CMS.
+   *
+   * @returns {*} promise of the $http.post
+   */
+  this.loadConfig = function () {
+    $log.debug("Loading config");
+    var queryUrl = $element.attr('getConfig');
+    if (queryUrl != undefined) {
+      return $http.post(queryUrl).then(
+        function (response) {
+          return response;
+        },
+        function (httpError) {
+          // translate the error
+          throw httpError.status + " : " +
+          httpError.data;
+        }
       )
     }
   }
@@ -71,15 +91,15 @@ function ngFieldController ($scope, $timeout, $log, $element, $http, $mdDialog) 
     var queryUrl = $element.attr('setModel');
     if (queryUrl != undefined) {
       return $http.post(queryUrl, model).then(
-          function (response) {
-            $scope.lastChanged = new Date().toLocaleString();
-            return response;
-          },
-          function (httpError) {
-            // translate the error
-            throw httpError.status + " : " +
-            httpError.data;
-          }
+        function (response) {
+          $scope.lastChanged = new Date().toLocaleString();
+          return response;
+        },
+        function (httpError) {
+          // translate the error
+          throw httpError.status + " : " +
+          httpError.data;
+        }
       );
     }
   };
@@ -146,7 +166,8 @@ function ngFieldController ($scope, $timeout, $log, $element, $http, $mdDialog) 
   };
 
   /**
-   * Switches perspectives in the CMS by using the configured {@link org.onehippo.forge.angular.perspective.IAngularPerspectiveService}
+   * Switches perspectives in the CMS by using the configured {@link
+   * org.onehippo.forge.angular.perspective.IAngularPerspectiveService}
    * @param name name of the service
    * @param action action to execute (provided to service)
    * @param option option to pass (provided to service)
@@ -167,7 +188,7 @@ function ngFieldController ($scope, $timeout, $log, $element, $http, $mdDialog) 
   }
 }
 
-sdkApp.directive('ngField',  function () {
+sdkApp.directive('ngField', function () {
   return {
     restrict: 'A',
     scope: {
@@ -183,23 +204,25 @@ sdkApp.directive('ngPerspective', function () {
     scope: {
       mode: '='
     },
-    controller: ['$scope', '$timeout', '$log', '$element', '$http', function ($scope, $timeout, $log, $element, $http) {
+    controller: [
+      '$scope', '$timeout', '$log', '$element', '$http', function ($scope, $timeout, $log, $element, $http) {
 
-      this.getMode = function () {
-        return $scope.mode;
-      }
+        this.getMode = function () {
+          return $scope.mode;
+        }
 
-      this.getUserSessionInfo = function () {
-        $log.debug("Loading userInfo");
-        var queryUrl = this.getCallback('getUserSessionInfo');
-        if (queryUrl != undefined) {
-          return $http.post(queryUrl);
+        this.getUserSessionInfo = function () {
+          $log.debug("Loading userInfo");
+          var queryUrl = this.getCallback('getUserSessionInfo');
+          if (queryUrl != undefined) {
+            return $http.post(queryUrl);
+          }
+        }
+
+        this.getCallback = function (callbackName) {
+          return $element.attr(callbackName);
         }
       }
-
-      this.getCallback = function (callbackName) {
-        return $element.attr(callbackName);
-      }
-    }]
+    ]
   };
 });
